@@ -123,6 +123,16 @@ bool FAN_toilet_ON = false;                // состояние вытяжки 
 bool last_state_FAN_bathroom = false;      // предыдущее состояние вытяжки ванной
 bool last_state_FAN_toilet = false;        // предыдущее состояние вытяжки туалета
 
+
+// топики состояния реле
+char topic_fan_bath[] = "user_1502445e/fan/bath";
+char topic_fan_toilet[] = "user_1502445e/fan/toilet";
+
+// топики управления реле
+char topic_fan_bath_ctrl[] = "user_1502445e/fan/bath_ctrl"; 
+char topic_fan_toilet_ctrl[] = "user_1502445e/fan/toilet_ctrl";
+
+
 //==================================================================================
 void setup() {
   pinMode(PIN_FAN_bathroom, OUTPUT); digitalWrite (PIN_FAN_bathroom , HIGH);
@@ -175,24 +185,28 @@ void Fan_timer (void) {
   if ((((long)millis() - FAN_bathroom_manual_time) >= FAN_ON_MANUAL_TIME) && FAN_bathroom_manual_flag) {
     FAN_bathroom_ON = false; 
     FAN_bathroom_manual_flag = false;
+    MQTT_publish_int(topic_fan_bath, FAN_bathroom_ON);
   }
   
   // после включения через UDP прошло время FAN_ON_UDP_TIME 
   if ((((long)millis() - FAN_bathroom_UDP_time) >= FAN_ON_UDP_TIME) && FAN_bathroom_UDP_flag) {
     FAN_bathroom_ON = false;
     FAN_bathroom_UDP_flag = false; 
+    MQTT_publish_int(topic_fan_bath, FAN_bathroom_ON);
   }
   
   // после включения вручную прошло время FAN_ON_MANUAL_TIME 
   if ((((long)millis() - FAN_toilet_manual_time) >= FAN_ON_MANUAL_TIME) && FAN_toilet_manual_flag) {
     FAN_toilet_ON = false; 
     FAN_toilet_manual_flag = false;
+    MQTT_publish_int(topic_fan_toilet, FAN_toilet_ON);
   }
 
   // после включения через UDP прошло время FAN_ON_UDP_TIME 
   if ((((long)millis() - FAN_toilet_UDP_time) >= FAN_ON_UDP_TIME) && FAN_toilet_UDP_flag) {
     FAN_toilet_ON = false;
     FAN_toilet_UDP_flag = false;
+    MQTT_publish_int(topic_fan_toilet, FAN_toilet_ON);
   }
 }
 
@@ -221,4 +235,19 @@ void Receive_UDP(void) {
       FAN_bathroom_UDP_flag = false;
     }
   }
+}
+
+//==================================================================================
+// функция управления реле для включения вентиляторов
+void Fan_control (void) {
+  if (FAN_bathroom_ON != last_state_FAN_bathroom) {
+    last_state_FAN_bathroom = FAN_bathroom_ON; 
+    digitalWrite (PIN_FAN_bathroom , !FAN_bathroom_ON);       // реле управляется низким уровнем 0=ON
+    MQTT_publish_int(topic_fan_bath, FAN_bathroom_ON);  // публикация данных в MQTT  
+  } 
+  if (FAN_toilet_ON != last_state_FAN_toilet) {
+    last_state_FAN_toilet = FAN_toilet_ON;
+    digitalWrite (PIN_FAN_toilet , !FAN_toilet_ON);          // реле управляется низким уровнем 0=ON
+    MQTT_publish_int(topic_fan_toilet, FAN_toilet_ON); // публикация данных в MQTT  
+  } 
 }
